@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>咒術迴戰對決</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            padding: 20px;
+        }
+
+        .selection-screen, .battle-screen {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .selection-screen h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 40px;
+            font-size: 36px;
+        }
+
+        .character-selection {
+            display: flex;
+            justify-content: space-around;
+            gap: 30px;
+        }
+
+        .character-card {
+            flex: 1;
+            background: linear-gradient(145deg, #f0f0f0, #ffffff);
+            border-radius: 15px;
+            padding: 30px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 3px solid transparent;
+        }
+
+        .character-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+            border-color: #667eea;
+        }
+
+        .character-card h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 28px;
+            color: #333;
+        }
+
+        .stats {
+            margin: 15px 0;
+            font-size: 16px;
+            color: #555;
+        }
+
+        .stats strong {
+            color: #333;
+        }
+
+        .battle-screen {
+            display: none;
+            position: relative;
+            min-height: 80vh;
+        }
+
+        .battle-area {
+            position: relative;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 40px 0;
+            min-height: 400px;
+        }
+
+        .battle-card {
+            width: 300px;
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            position: relative;
+            z-index: 10;
+        }
+
+        .battle-card.enemy-card {
+            cursor: pointer;
+        }
+
+        .battle-card.enemy-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 15px 40px rgba(255, 0, 0, 0.3);
+        }
+
+        .battle-card h3 {
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 24px;
+            color: #333;
+        }
+
+        .hp-bar {
+            background: #ddd;
+            height: 25px;
+            border-radius: 12px;
+            overflow: hidden;
+            margin: 10px 0;
+            position: relative;
+        }
+
+        .hp-fill {
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+            height: 100%;
+            transition: width 0.5s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            font-size: 14px;
+        }
+
+        .energy-bar {
+            background: #ddd;
+            height: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+            position: relative;
+        }
+
+        .energy-fill {
+            background: linear-gradient(90deg, #2196F3, #03A9F4);
+            height: 100%;
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            font-size: 12px;
+        }
+
+        .skills {
+            margin-top: 20px;
+        }
+
+        .skill-btn {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        .skill-btn:hover:not(:disabled) {
+            transform: scale(1.05);
+        }
+
+        .skill-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .skill-btn.selected {
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+            border: 3px solid gold;
+        }
+
+        .normal-attack {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .special-attack {
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            color: white;
+        }
+
+        .ultimate-attack {
+            background: linear-gradient(135deg, #fa709a, #fee140);
+            color: white;
+        }
+
+        .effect-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .slash-line {
+            position: absolute;
+            background: white;
+            height: 3px;
+            transform-origin: left center;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+        }
+
+        .hit-effect {
+            position: absolute;
+            font-size: 24px;
+            font-weight: bold;
+            color: #F44;
+            animation: hitPulse 0.5s ease-out;
+        }
+
+        @keyframes hitPulse {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+
+        .blue-sphere {
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(33, 150, 243, 0.6), rgba(33, 150, 243, 0.2));
+            animation: pulse 0.5s ease-in-out infinite alternate;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.1); }
+        }
+
+        .purple-orb {
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(138, 43, 226, 0.9), rgba(75, 0, 130, 0.6));
+            animation: spin 1s linear infinite;
+            box-shadow: 0 0 30px rgba(138, 43, 226, 0.8);
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .explosion {
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(138, 43, 226, 0.8), transparent);
+            animation: explode 0.5s ease-out;
+        }
+
+        @keyframes explode {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(3); opacity: 0; }
+        }
+
+        .status-info {
+            margin: 10px 0;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .turn-indicator {
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin: 20px 0;
+        }
+
+        .cooldown {
+            font-size: 12px;
+            color: #f44336;
+        }
+
+        .passive-active {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="selection-screen" id="selectionScreen">
+            <h1>選擇你的角色</h1>
+            <div class="character-selection">
+                <div class="character-card" data-char="sukuna">
+                    <h2>宿儺</h2>
+                    <div class="stats"><strong>生命值：</strong>1200</div>
+                    <div class="stats"><strong>攻擊力：</strong>200</div>
+                    <div class="stats"><strong>閃避率：</strong>30%</div>
+                    <div class="stats"><strong>被動：</strong>受到攻擊後，下回合攻擊力提升15%</div>
+                    <div class="stats"><strong>技能：</strong></div>
+                    <div class="stats">• 普通打擊</div>
+                    <div class="stats">• 連續斬擊（冷卻1回合）</div>
+                    <div class="stats"><strong>終結技：</strong>服魔御廚子（需100%衝能）</div>
+                </div>
+
+                <div class="character-card" data-char="gojo">
+                    <h2>五條悟</h2>
+                    <div class="stats"><strong>生命值：</strong>1000</div>
+                    <div class="stats"><strong>攻擊力：</strong>200</div>
+                    <div class="stats"><strong>閃避率：</strong>40%</div>
+                    <div class="stats"><strong>被動：</strong>每兩回合執行一次，減少99%受到的傷害</div>
+                    <div class="stats"><strong>技能：</strong></div>
+                    <div class="stats">• 普通打擊</div>
+                    <div class="stats">• 吸引力魔法（冷卻1回合）</div>
+                    <div class="stats"><strong>終結技：</strong>虛式（需100%衝能）</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="battle-screen" id="battleScreen">
+            <div class="turn-indicator" id="turnIndicator">你的回合</div>
+            <div class="battle-area" id="battleArea">
+                <div class="effect-layer" id="effectLayer"></div>
+                
+                <div class="battle-card" id="playerCard">
+                    <h3 id="playerName"></h3>
+                    <div class="hp-bar">
+                        <div class="hp-fill" id="playerHp"></div>
+                    </div>
+                    <div class="status-info">
+                        <div>攻擊力: <span id="playerAtk"></span></div>
+                        <div id="playerPassive"></div>
+                    </div>
+                    <div class="energy-bar">
+                        <div class="energy-fill" id="playerEnergy">0%</div>
+                    </div>
+                    <div class="skills">
+                        <button class="skill-btn normal-attack" data-skill="normal">普通打擊</button>
+                        <button class="skill-btn special-attack" id="specialSkill" data-skill="special"></button>
+                        <button class="skill-btn ultimate-attack" id="ultimateSkill" data-skill="ultimate" disabled>終結技</button>
+                    </div>
+                </div>
+
+                <div class="battle-card enemy-card" id="enemyCard">
+                    <h3 id="enemyName"></h3>
+                    <div class="hp-bar">
+                        <div class="hp-fill" id="enemyHp"></div>
+                    </div>
+                    <div class="status-info">
+                        <div>攻擊力: <span id="enemyAtk"></span></div>
+                        <div id="enemyPassive"></div>
+                    </div>
+                    <div class="energy-bar">
+                        <div class="energy-fill" id="enemyEnergy">0%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const characters = {
+            sukuna: {
+                name: '宿儺',
+                maxHp: 1200,
+                hp: 1200,
+                baseAtk: 200,
+                atk: 200,
+                dodge: 0.3,
+                energy: 0,
+                specialCooldown: 0,
+                atkBoost: false,
+                skills: { special: '連續斬擊' }
+            },
+            gojo: {
+                name: '五條悟',
+                maxHp: 1000,
+                hp: 1000,
+                baseAtk: 200,
+                atk: 200,
+                dodge: 0.4,
+                energy: 0,
+                specialCooldown: 0,
+                shieldTurn: 0,
+                skills: { special: '吸引力魔法' }
+            }
+        };
+
+        let player, enemy, currentSkill = null, turnLocked = false, turnCount = 0;
+
+        // Character selection
+        document.querySelectorAll('.character-card').forEach(card => {
+            card.addEventListener('click', function() {
+                const char = this.getAttribute('data-char');
+                selectCharacter(char);
+            });
+        });
+
+        // Skill buttons
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('skill-btn') && !e.target.disabled) {
+                const skill = e.target.getAttribute('data-skill');
+                useSkill(skill, e.target);
+            }
+        });
+
+        // Enemy card click
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('#enemyCard')) {
+                attackEnemy();
+            }
+        });
+
+        function selectCharacter(char) {
+            player = JSON.parse(JSON.stringify(characters[char]));
+            enemy = JSON.parse(JSON.stringify(characters[char === 'sukuna' ? 'gojo' : 'sukuna']));
+            
+            document.getElementById('selectionScreen').style.display = 'none';
+            document.getElementById('battleScreen').style.display = 'block';
+            
+            initBattle();
+        }
+
+        function initBattle() {
+            document.getElementById('playerName').textContent = player.name;
+            document.getElementById('enemyName').textContent = enemy.name + ' (BOSS)';
+            document.getElementById('specialSkill').textContent = player.skills.special;
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById('playerHp').style.width = (player.hp / player.maxHp) * 100 + '%';
+            document.getElementById('playerHp').textContent = `${Math.floor(player.hp)}/${player.maxHp}`;
+            document.getElementById('playerAtk').textContent = Math.floor(player.atk);
+            document.getElementById('playerEnergy').style.width = player.energy + '%';
+            document.getElementById('playerEnergy').textContent = Math.floor(player.energy) + '%';
+            
+            document.getElementById('enemyHp').style.width = (enemy.hp / enemy.maxHp) * 100 + '%';
+            document.getElementById('enemyHp').textContent = `${Math.floor(enemy.hp)}/${enemy.maxHp}`;
+            document.getElementById('enemyAtk').textContent = Math.floor(enemy.atk);
+            document.getElementById('enemyEnergy').style.width = enemy.energy + '%';
+            document.getElementById('enemyEnergy').textContent = Math.floor(enemy.energy) + '%';
+            
+            if (player.name === '宿儺' && player.atkBoost) {
+                document.getElementById('playerPassive').innerHTML = '<span class="passive-active">攻擊力提升中！</span>';
+            } else if (player.name === '五條悟' && player.shieldTurn === turnCount) {
+                document.getElementById('playerPassive').innerHTML = '<span class="passive-active">無限防禦啟動！</span>';
+            } else {
+                document.getElementById('playerPassive').textContent = '';
+            }
+            
+            if (enemy.name === '宿儺' && enemy.atkBoost) {
+                document.getElementById('enemyPassive').innerHTML = '<span class="passive-active">攻擊力提升中！</span>';
+            } else if (enemy.name === '五條悟' && enemy.shieldTurn === turnCount) {
+                document.getElementById('enemyPassive').innerHTML = '<span class="passive-active">無限防禦啟動！</span>';
+            } else {
+                document.getElementById('enemyPassive').textContent = '';
+            }
+            
+            const specialBtn = document.getElementById('specialSkill');
+            if (player.specialCooldown > 0) {
+                specialBtn.disabled = true;
+                specialBtn.innerHTML = player.skills.special + ' <span class="cooldown">(冷卻中)</span>';
+            } else {
+                specialBtn.disabled = turnLocked;
+                specialBtn.textContent = player.skills.special;
+            }
+            
+            document.getElementById('ultimateSkill').disabled = player.energy < 100 || turnLocked;
+            document.querySelectorAll('.skill-btn').forEach(btn => btn.classList.remove('selected'));
+            
+            if (player.hp <= 0) {
+                setTimeout(() => { alert('你輸了！'); location.reload(); }, 100);
+            } else if (enemy.hp <= 0) {
+                setTimeout(() => { alert('你贏了！'); location.reload(); }, 100);
+            }
+        }
+
+        function useSkill(skillType, button) {
+            if (turnLocked) return;
+            currentSkill = skillType;
+            document.getElementById('turnIndicator').textContent = '點擊敵人進行攻擊！';
+            document.querySelectorAll('.skill-btn').forEach(btn => btn.classList.remove('selected'));
+            button.classList.add('selected');
+        }
+
+        async function attackEnemy() {
+            if (!currentSkill || turnLocked) return;
+            turnLocked = true;
+            document.getElementById('turnIndicator').textContent = '攻擊中...';
+            
+            if (Math.random() < enemy.dodge) {
+                showHitEffect(document.getElementById('enemyCard'), 'MISS!');
+                currentSkill = null;
+                setTimeout(enemyTurn, 1000);
+                return;
+            }
+            
+            if (currentSkill === 'normal') {
+                await normalAttack(player, enemy, 'player');
+            } else if (currentSkill === 'special') {
+                if (player.name === '宿儺') await consecutiveSlash(player, enemy);
+                else await attractionMagic(player, enemy);
+                player.specialCooldown = 2;
+            } else if (currentSkill === 'ultimate') {
+                if (player.name === '宿儺') await mahoragaKitchen(player, enemy);
+                else await hollowPurple(player, enemy);
+                player.energy = 0;
+            }
+            
+            currentSkill = null;
+            updateUI();
+            setTimeout(enemyTurn, 1500);
+        }
+
+        async function normalAttack(attacker, defender, side) {
+            const damage = Math.floor(attacker.atk);
+            const finalDmg = applyDefense(damage, defender);
+            defender.hp = Math.max(0, defender.hp - finalDmg);
+            attacker.energy = Math.min(100, attacker.energy + 5);
+            
+            const card = side === 'player' ? document.getElementById('enemyCard') : document.getElementById('playerCard');
+            showHitEffect(card, `-${finalDmg}`);
+            updateUI();
+            
+            return new Promise(resolve => setTimeout(resolve, 300));
+        }
+
+        async function consecutiveSlash(attacker, defender) {
+            const card = document.getElementById('enemyCard');
+            const rect = card.getBoundingClientRect();
+            
+            for (let i = 0; i < 10; i++) {
+                const damage = Math.floor(attacker.atk * 0.4);
+                const finalDmg = applyDefense(damage, defender);
+                defender.hp = Math.max(0, defender.hp - finalDmg);
+                attacker.energy = Math.min(100, attacker.energy + 5);
+                
+                createSlashLine(rect.left + rect.width / 2, rect.top + rect.height / 2);
+                showHitEffect(card, `-${finalDmg}`);
+                updateUI();
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+        }
+
+        async function attractionMagic(attacker, defender) {
+            const card = document.getElementById('enemyCard');
+            const rect = card.getBoundingClientRect();
+            
+            const sphere = document.createElement('div');
+            sphere.className = 'blue-sphere';
+            sphere.style.width = '200px';
+            sphere.style.height = '200px';
+            sphere.style.left = (rect.left + rect.width / 2 - 100) + 'px';
+            sphere.style.top = (rect.top + rect.height / 2 - 100) + 'px';
+            document.getElementById('effectLayer').appendChild(sphere);
+            
+            for (let i = 0; i < 10; i++) {
+                const damage = Math.floor(attacker.atk * 0.4);
+                const finalDmg = applyDefense(damage, defender);
+                defender.hp = Math.max(0, defender.hp - finalDmg);
+                attacker.energy = Math.min(100, attacker.energy + 5);
+                showHitEffect(card, `-${finalDmg}`);
+                updateUI();
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            sphere.remove();
+        }
+
+        async function mahoragaKitchen(attacker, defender) {
+            const battleArea = document.getElementById('battleArea');
+            const originalBg = battleArea.style.background;
+            battleArea.style.background = 'black';
+            
+            const playerRect = document.getElementById('playerCard').getBoundingClientRect();
+            const enemyRect = document.getElementById('enemyCard').getBoundingClientRect();
+            
+            for (let i = 0; i < 50; i++) {
+                const damage = Math.floor(attacker.atk * 0.2);
+                const finalDmg = applyDefense(damage, defender);
+                defender.hp = Math.max(0, defender.hp - finalDmg);
+                attacker.energy = Math.min(100, attacker.energy + 5);
+                createUltimateSlash(playerRect, enemyRect);
+                updateUI();
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            battleArea.style.background = originalBg;
+        }
+
+        async function hollowPurple(attacker, defender) {
+            const playerRect = document.getElementById('playerCard').getBoundingClientRect();
+            const enemyRect = document.getElementById('enemyCard').getBoundingClientRect();
+            
+            const orb = document.createElement('div');
+            orb.className = 'purple-orb';
+            orb.style.width = '20px';
+            orb.style.height = '20px';
+            orb.style.left = (playerRect.left + playerRect.width / 2 - 10) + 'px';
+            orb.style.top = (playerRect.top + playerRect.height / 2 - 10) + 'px';
+            document.getElementById('effectLayer').appendChild(orb);
+            
+            let size = 20;
+            for (let i = 0; i < 8; i++) {
+                size += 10;
+                orb.style.width = size + 'px';
+                orb.style.height = size + 'px';
+                orb.style.left = (playerRect.left + playerRect.width / 2 - size / 2) + 'px';
+                orb.style.top = (playerRect.top + playerRect.height / 2 - size / 2) + 'px';
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            orb.style.transition = 'all 0.5s ease-out';
+            orb.style.left = (enemyRect.left + enemyRect.width / 2 - 50) + 'px';
+            orb.style.top = (enemyRect.top + enemyRect.height / 2 - 50) + 'px';
+            await new Promise(resolve => setTimeout(resolve, 500));
+            orb.remove();
+            
+            const explosion = document.createElement('div');
+            explosion.className = 'explosion';
+            explosion.style.width = '200px';
+            explosion.style.height = '200px';
+            explosion.style.left = (enemyRect.left + enemyRect.width / 2 - 100) + 'px';
+            explosion.style.top = (enemyRect.top + enemyRect.height / 2 - 100) + 'px';
+            document.getElementById('effectLayer').appendChild(explosion);
+            
+            const damage = Math.floor(attacker.atk * 10);
+            const finalDmg = applyDefense(damage, defender);
+            defender.hp = Math.max(0, defender.hp - finalDmg);
+            attacker.energy = Math.min(100, attacker.energy + 5);
+            showHitEffect(document.getElementById('enemyCard'), `-${finalDmg}`);
+            updateUI();
+            setTimeout(() => explosion.remove(), 500);
+        }
+
+        function createSlashLine(x, y) {
+            const slash = document.createElement('div');
+            slash.className = 'slash-line';
+            slash.style.width = (100 + Math.random() * 100) + 'px';
+            slash.style.left = x + 'px';
+            slash.style.top = y + 'px';
+            slash.style.transform = `rotate(${Math.random() * 360}deg)`;
+            document.getElementById('effectLayer').appendChild(slash);
+            setTimeout(() => slash.remove(), 200);
+        }
+
+        function createUltimateSlash(playerRect, enemyRect) {
+            const slash = document.createElement('div');
+            slash.className = 'slash-line';
+            
+            const startX = playerRect.left + Math.random() * playerRect.width;
+            const startY = playerRect.top + Math.random() * playerRect.height;
+            const endX = enemyRect.left + Math.random() * enemyRect.width;
+            const endY = enemyRect.top + Math.random() * enemyRect.height;
+            
+            const length = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2)) + 500;
+            const angle = Math.atan2(endY - startY, endX - startX) * 180 / Math.PI;
+            
+            slash.style.width = length + 'px';
+            slash.style.left = startX + 'px';
+            slash.style.top = startY + 'px';
+            slash.style.transform = `rotate(${angle}deg)`;
+            document.getElementById('effectLayer').appendChild(slash);
+            setTimeout(() => slash.remove(), 200);
+        }
+
+        function showHitEffect(card, text) {
+            const rect = card.getBoundingClientRect();
+            const effect = document.createElement('div');
+            effect.className = 'hit-effect';
+            effect.style.left = (rect.left + rect.width / 2) + 'px';
+            effect.style.top = (rect.top + rect.height / 2) + 'px';
+            effect.textContent = text;
+            effect.style.color = text === 'MISS!' ? '#FFF' : '#F44';
+            document.getElementById('effectLayer').appendChild(effect);
+            setTimeout(() => effect.remove(), 500);
+        }
+
+        function applyDefense(damage, defender) {
+            if (defender.name === '五條悟' && defender.shieldTurn === turnCount) {
+                return Math.floor(damage * 0.01);
+            }
+            return damage;
+        }
+
+        async function enemyTurn() {
+            turnCount++;
+            if (player.specialCooldown > 0) player.specialCooldown--;
+            if (enemy.specialCooldown > 0) enemy.specialCooldown--;
+            
+            if (player.atkBoost) { player.atk = player.baseAtk; player.atkBoost = false; }
+            if (enemy.atkBoost) { enemy.atk = enemy.baseAtk; enemy.atkBoost = false; }
+            
+            if (player.name === '五條悟' && turnCount % 2 === 0) player.shieldTurn = turnCount;
+            if (enemy.name === '五條悟' && turnCount % 2 === 0) enemy.shieldTurn = turnCount;
+            
+            updateUI();
+            document.getElementById('turnIndicator').textContent = '敵人的回合';
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            if (Math.random() < player.dodge) {
+                showHitEffect(document.getElementById('playerCard'), 'MISS!');
+                turnLocked = false;
+                document.getElementById('turnIndicator').textContent = '你的回合';
+                updateUI();
+                return;
+            }
+            
+            if (enemy.energy >= 100) {
+                if (enemy.name === '宿儺') await mahoragaKitchen(enemy, player);
+                else await hollowPurple(enemy, player);
+                enemy.energy = 0;
+            } else if (enemy.specialCooldown === 0 && Math.random() > 0.5) {
+                if (enemy.name === '宿儺') await consecutiveSlash(enemy, player);
+                else await attractionMagic(enemy, player);
+                enemy.specialCooldown = 2;
+            } else {
+                await normalAttack(enemy, player, 'enemy');
+            }
+            
+            if (player.name === '宿儺') { player.atk = player.baseAtk * 1.15; player.atkBoost = true; }
+            
+            turnLocked = false;
+            document.getElementById('turnIndicator').textContent = '你的回合';
+            updateUI();
+        }
+    </script>
